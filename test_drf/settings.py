@@ -29,11 +29,13 @@ SECRET_KEY = 'django-insecure-lt=m6omtncdj_17_3$9_rm2-q=p4s6nb&^#q2takf&53g8ooth
 DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
+CORS_ORIGIN_ALLOW_ALL = True
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-]
+# CORS_ALLOWED_ORIGINS = [
+#     'http://localhost:5173',
+#     'http://127.0.0.1:5173',
+#     'https://sensational-cupcake-0251a3.netlify.app'
+# ]
 
 CORS_ALLOW_CREDENTIALS = True
 
