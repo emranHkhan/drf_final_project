@@ -157,3 +157,5 @@ EMAIL_HOST_PASSWORD=env('EMAIL_HOST_PASSWORD')
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
+CSRF_TRUSTED_ORIGINS = ['https://online-school-drf.onrender.com']
+
