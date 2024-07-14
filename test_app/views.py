@@ -83,10 +83,10 @@ class CourseList(generics.ListAPIView):
 
         return queryset
 
-class CourseDetail(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Course.objects.all()
-    serializer_class = CourseSerializer
-    permission_classes = [IsOwnerOrReadOnly]
+# class CourseDetail(generics.RetrieveUpdateDestroyAPIView):
+#     queryset = Course.objects.all()
+#     serializer_class = CourseSerializer
+#     permission_classes = [IsOwnerOrReadOnly]
 
 class CourseCreateAPIView(generics.CreateAPIView):
     queryset = Course.objects.all()
@@ -106,6 +106,32 @@ class CourseCreateAPIView(generics.CreateAPIView):
             raise PermissionDenied("Only teachers can create courses.")
         serializer.save()
 
+class CourseDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Course.objects.all()
+    serializer_class = CourseSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated:
+            return Course.objects.filter(teacher=user)
+        raise PermissionDenied("Please Login to see all courses.")
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        if not user.is_authenticated or user.role != 'teacher':
+            raise PermissionDenied("You do not have permission to edit this course.")
+        if serializer.instance.teacher != user:
+            raise PermissionDenied("You do not have permission to edit this course.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        user = self.request.user
+        if not user.is_authenticated or user.role != 'teacher':
+            raise PermissionDenied("You do not have permission to delete this course.")
+        if instance.teacher != user:
+            raise PermissionDenied("You do not have permission to delete this course.")
+        instance.delete()
 class EnrollmentList(generics.ListCreateAPIView):
     queryset = Enrollment.objects.all()
     serializer_class = EnrollmentSerializer
@@ -214,7 +240,7 @@ class UserLoginApiView(APIView):
             if user:
                 token, _ = Token.objects.get_or_create(user=user)
                 login(request, user)
-                return Response({'token': token.key, 'user_id': user.id, 'user_email' : user.email, 'user_role' : user.role})
+                return Response({'token': token.key, 'user_id': user.id, 'user_email' : user.email, 'user_role' : user.role, 'image_url' : user.image, 'user_name': user.username})
             return Response({'error': 'Invalid username or password'})
         return Response(serializer.errors)
     

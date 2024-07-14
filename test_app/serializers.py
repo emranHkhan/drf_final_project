@@ -63,10 +63,11 @@ class CategorySerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     student = serializers.PrimaryKeyRelatedField(queryset=User.objects.filter(role='student'))
     student_name = serializers.CharField(source='student.username', read_only=True)
+    student_image = serializers.CharField(source='student.image', read_only=True)
 
     class Meta:
         model = Comment
-        fields = ['id', 'student', 'student_name', 'course', 'content', 'created_at']
+        fields = ['id', 'student', 'student_name', 'student_image', 'course', 'content', 'created_at']
 
     def validate(self, attrs):
         student = attrs['student']
@@ -94,16 +95,20 @@ class CourseSerializer(serializers.ModelSerializer):
     category_name = serializers.SerializerMethodField(read_only=True)
     comments = CommentSerializer(many=True, read_only=True)
     students = UserSerializer(many=True, read_only=True)
+    teacher_image = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Course
-        fields = ['id', 'title', 'description', 'teacher', 'teacher_name', 'category', 'category_name', 'price', 'created_at', 'comments', 'students']
+        fields = ['id', 'title', 'description', 'teacher', 'teacher_name', 'teacher_image', 'category', 'category_name', 'price', 'created_at', 'comments', 'students']
 
     def get_teacher_name(self, obj):
         return obj.teacher.username if obj.teacher else None
     
     def get_category_name(self, obj):
         return obj.category.name if obj.category else None
+    
+    def get_teacher_image(self, obj):
+        return obj.teacher.image if obj.teacher else None
     
     def validate_teacher(self, value):
         request = self.context.get('request')
