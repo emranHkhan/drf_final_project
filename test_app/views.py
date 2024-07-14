@@ -232,9 +232,10 @@ class TeacherList(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return User.objects.filter(role='teacher')
+    
+
 
 # test_app/views.py
-from django.conf import settings
 from django.http import HttpResponse
 from django.urls import get_resolver, reverse
 from django.utils.html import format_html
@@ -257,15 +258,13 @@ url_descriptions = {
     'teacher-list': 'List all teachers',
 }
 
-# Determine the base URL based on the environment
-if settings.DEBUG:
-    base_url = 'http://127.0.0.1:8000/api/'
-else:
-    base_url = 'https://online-school-drf.onrender.com/api/'
-
 def list_urls(request):
     urlconf = get_resolver()
     urls = urlconf.reverse_dict.keys()
+    scheme = request.scheme
+    host = request.get_host()
+    base_url = f"{scheme}://{host}/api/"
+    
     response = '<h1>Available URLs</h1><ul>'
     for url in urls:
         if isinstance(url, str):  # Filter out non-string keys
@@ -279,3 +278,4 @@ def list_urls(request):
                 response += format_html('<li>{} (URL requires parameters) - {}</li>', url, description)
     response += '</ul>'
     return HttpResponse(response)
+
