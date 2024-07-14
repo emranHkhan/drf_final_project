@@ -1,4 +1,6 @@
-from django.shortcuts import redirect
+from django.utils.html import format_html
+from django.http import HttpResponse
+from django.urls import get_resolver, reverse
 from rest_framework import generics, permissions, status
 from .models import User, Category, Course, Enrollment, Comment
 from .serializers import UserSerializer, CategorySerializer, CourseSerializer, EnrollmentSerializer, CommentSerializer, UserLoginSerializer
@@ -13,17 +15,6 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
-
-    
-class IsOwnerOrReadOnly(permissions.BasePermission):
-    """
-    Custom permission to only allow owners of an object to edit or delete it.
-    """
-    def has_object_permission(self, request, _, obj):
-        if request.method in permissions.SAFE_METHODS:
-            return True
-
-        return obj.teacher == request.user
 
 class UserList(generics.ListAPIView):
     queryset = User.objects.all()
@@ -82,11 +73,6 @@ class CourseList(generics.ListAPIView):
             queryset = queryset.order_by(ordering)
 
         return queryset
-
-# class CourseDetail(generics.RetrieveUpdateDestroyAPIView):
-#     queryset = Course.objects.all()
-#     serializer_class = CourseSerializer
-#     permission_classes = [IsOwnerOrReadOnly]
 
 class CourseCreateAPIView(generics.CreateAPIView):
     queryset = Course.objects.all()
@@ -198,21 +184,6 @@ class UserRegistrationView(APIView):
             return Response({"message":"Check your email for confirmation.", "credentials": {"uid": uid, "token": token}})
         return Response(serializer.errors)
 
-# def activate(request, uid64, token):
-#     try:
-#         uid = urlsafe_base64_decode(uid64).decode()
-#         user = User._default_manager.get(pk=uid)
-#     except (User.DoesNotExist):
-#         user = None
-
-#     if user is not None and default_token_generator.check_token(user, token):
-#         user.is_active = True
-#         user.save()
-#     #     return redirect('login')
-#     # return redirect('register')
-#         return Response({'status': 'success'}, status=200)
-#     return Response({'status': 'failure'}, status=400)
-
 class ActivateAccountView(APIView):
     def get(self, request, uid64, token):
         try:
@@ -244,14 +215,6 @@ class UserLoginApiView(APIView):
             return Response({'error': 'Invalid username or password'})
         return Response(serializer.errors)
     
-
-# class UserLogoutApiView(APIView):
-#     def get(self, request):
-#         request.user.auth_token.delete()
-#         logout(request)
-#         return redirect('login')
-
-
 class UserLogoutApiView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -270,34 +233,49 @@ class TeacherList(generics.ListCreateAPIView):
     def get_queryset(self):
         return User.objects.filter(role='teacher')
 
-# class TeacherDetail(generics.RetrieveUpdateDestroyAPIView):
-#     queryset = Teacher.objects.all()
-#     serializer_class = TeacherSerializer
+# test_app/views.py
+from django.conf import settings
+from django.http import HttpResponse
+from django.urls import get_resolver, reverse
+from django.utils.html import format_html
 
-# class StudentList(generics.ListCreateAPIView):
-#     queryset = Student.objects.all()
-#     serializer_class = StudentSerializer
+# Dictionary to map URL names to descriptions
+url_descriptions = {
+    'user-list': 'List all users',
+    'user-detail': 'Detail view of a specific user',
+    'category-list': 'List all categories',
+    'course-list': 'List all courses (by teacher and category)',
+    'course-detail': 'Detail view of a specific course',
+    'enrollment-list': 'List all enrollments',
+    'enrollments-by-student': 'List all enrollments for a specific student',
+    'comment-list': 'List all comments',
+    'register': 'User registration',
+    'login': 'User login',
+    'logout': 'User logout',
+    'activate': 'Activate user account',
+    'course-create': 'Create a new course',
+    'teacher-list': 'List all teachers',
+}
 
-# class StudentDetail(generics.RetrieveUpdateDestroyAPIView):
-#     queryset = Student.objects.all()
-#     serializer_class = StudentSerializer
+# Determine the base URL based on the environment
+if settings.DEBUG:
+    base_url = 'http://127.0.0.1:8000/api/'
+else:
+    base_url = 'https://online-school-drf.onrender.com/api/'
 
-
-# class UserLoginApiView(APIView):
-#     def post(self, request):
-#         serializer = UserLoginSerializer(data=request.data)
-#         if serializer.is_valid():
-#             username = serializer.validated_data['username']
-#             password = serializer.validated_data['password']
-
-#             user = authenticate(username=username, password=password)
-
-#             if user:
-#                 login(request, user)
-#                 refresh = RefreshToken.for_user(user)
-#                 return Response({
-#                     'token': str(refresh.access_token),
-#                     'refresh_token': str(refresh)
-#                 }, status=status.HTTP_200_OK)
-#             return Response({'error': 'Invalid username or password'}, status=status.HTTP_401_UNAUTHORIZED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+def list_urls(request):
+    urlconf = get_resolver()
+    urls = urlconf.reverse_dict.keys()
+    response = '<h1>Available URLs</h1><ul>'
+    for url in urls:
+        if isinstance(url, str):  # Filter out non-string keys
+            try:
+                url_path = reverse(url)
+                full_url = base_url + url_path.lstrip('/')
+                description = url_descriptions.get(url, 'No description available')
+                response += format_html('<li><a href="{}">{}</a> - {}</li>', full_url, url, description)
+            except Exception as e:
+                # Handle exceptions for URL patterns that require parameters
+                response += format_html('<li>{} (URL requires parameters) - {}</li>', url, description)
+    response += '</ul>'
+    return HttpResponse(response)
